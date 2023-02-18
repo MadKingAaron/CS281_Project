@@ -33,6 +33,13 @@ def get_dataloaders(train, val, test, batch_size:int = 256):
     return train_loader, val_loader, test_loader
 
 
+def get_optimzer_loss_func(initial_lr:float, model:nn.Module):
+    loss_func = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(params=model.parameters(), lr=initial_lr)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer)
+
+    return loss_func, scheduler
+
 def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, epochs:int = 50):
     running_loss = 0.0
 
