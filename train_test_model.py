@@ -38,9 +38,9 @@ def get_optimzer_loss_func(initial_lr:float, model:nn.Module):
     optimizer = optim.Adam(params=model.parameters(), lr=initial_lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer)
 
-    return loss_func, scheduler
+    return loss_func, optimizer, scheduler
 
-def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, epochs:int = 50):
+def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, epochs:int = 50, scheduler = None):
     running_loss = 0.0
 
     for epoch in range(epochs):
@@ -65,18 +65,24 @@ def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, e
                 print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
                 running_loss = 0.0
         
-        # Get validation accuracy
-        val_accuracy = validate_model(model, valloader)
+        # Get validation accuracy and loss
+        val_accuracy, val_loss = validate_model(model, valloader)
+        if scheduler is not None:
+            scheduler.step(val_loss)
 
     return model
 
-def validate_model(model, testloader):
+def validate_model(model, testloader, loss_func):
     correct = 0
     total = 0
-
+    total_loss = 0.0
     with torch.no_grad():
         for inputs, labels in testloader:
             outputs = model(inputs)
+
+            # Calc loss
+            loss = loss_func(outputs, inputs)
+            total_loss += loss.item()
 
             # Predict classes
             _, preds = torch.max(outputs, 1)
@@ -87,6 +93,6 @@ def validate_model(model, testloader):
                     correct += 1
                 total += 1
     
-    return correct/total
+    return (correct/total), total_loss
 
 
