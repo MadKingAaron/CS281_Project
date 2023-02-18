@@ -42,11 +42,13 @@ def get_model_checkpoint(model_name:str = 'resnet50_50-epochs_stl10') -> str:
     #os.system('gdown https://drive.google.com/uc?id={} --folder {}'.format(file_id, download_folder))
     #os.system('unzip {}'.format(folder_name))
 
-def get_model(checkpt_path:str, model_arch:str = 'resnet50', classes:int = 10) -> nn.Module:
+def get_model(checkpt_path:str, model_arch:str = 'resnet50', classes:int = 10):
     if 'resnet50' in model_arch:
         model = torchvision.models.resnet50(pretrained=False, num_classes=classes)
+        transforms = torchvision.models.ResNet50_Weights.DEFAULT.transforms()
     elif 'resnet18' in model_arch:
         model = torchvision.models.resnet18(pretrained=False, num_classes=classes)
+        transforms = torchvision.models.ResNet18_Weights.DEFAULT.transforms()
     else:
         raise Exception('Wrong model arch selected')
     
@@ -64,14 +66,14 @@ def get_model(checkpt_path:str, model_arch:str = 'resnet50', classes:int = 10) -
     log = model.load_state_dict(state_dict, strict=False)
     assert log.missing_keys == ['fc.weight', 'fc.bias']
 
-    return model
+    return model, transforms
 
-def get_simclr_prtrained(pretrained_model:str = 'resnet50_50-epochs_stl10', class_num:int = 10) -> nn.Module:
+def get_simclr_pretrained(pretrained_model:str = 'resnet50_50-epochs_stl10', class_num:int = 10):
     checkpt_path = get_model_checkpoint(model_name=pretrained_model)
-    model = get_model(checkpt_path=checkpt_path, model_arch=pretrained_model, classes=class_num)
-    return model
+    model, transforms = get_model(checkpt_path=checkpt_path, model_arch=pretrained_model, classes=class_num)
+    return model, transforms
 
 if __name__ == '__main__':
     checkpt_path = get_model_checkpoint()
-    model = get_model(checkpt_path=checkpt_path, classes=30)
+    model, transforms = get_model(checkpt_path=checkpt_path, classes=30)
     print(model)
