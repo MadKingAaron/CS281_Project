@@ -45,7 +45,17 @@ def get_optimzer_loss_func(initial_lr:float, model:nn.Module):
 
     return loss_func, optimizer, scheduler
 
-def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, epochs:int = 50, scheduler = None):
+def apply_transforms(transforms, imgs:torch.Tensor, transformer_model:bool) -> torch.Tensor:
+    if transformer_model:
+        imgs = transforms([x for x in imgs], return_tensors="pt")['pixel_values']
+    else:
+        imgs = transforms(imgs)
+    
+    return imgs
+
+
+
+def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, epochs:int = 50, transformer_model:bool = False, scheduler = None, transforms = None):
     running_loss = 0.0
 
     for epoch in range(epochs):
@@ -56,8 +66,14 @@ def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, e
             # Zero grad
             optimizer.zero_grad()
 
+            # Apply image transformations
+            inputs = apply_transforms(transforms, inputs, transformer_model)
+
             # Forward + Backprop
             outputs = model(inputs)
+
+            if transformer_model:
+                outputs = outputs.logits
             
             loss = loss_func(outputs, labels)
             loss.backward()
@@ -71,19 +87,26 @@ def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, e
                 running_loss = 0.0
         
         # Get validation accuracy and loss
-        val_accuracy, val_loss = validate_model(model, valloader)
+        val_accuracy, val_loss = validate_model(model, valloader, loss_func, transformer_model, transforms)
         if scheduler is not None:
             scheduler.step(val_loss)
 
     return model
 
-def validate_model(model, testloader, loss_func):
+def validate_model(model, testloader, loss_func, transformer_model:bool = False, transforms = None):
     correct = 0
     total = 0
     total_loss = 0.0
     with torch.no_grad():
         for inputs, labels in testloader:
+            
+            # Apply image transformations
+            inputs = apply_transforms(transforms, inputs, transformer_model)
+
             outputs = model(inputs)
+
+            if transformer_model:
+                outputs = outputs.logits
 
             # Calc loss
             loss = loss_func(outputs, inputs)
