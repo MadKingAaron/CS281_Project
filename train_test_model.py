@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset
 
 import torchvision.datasets as datasets
+from torchvision import transforms
 
 
 def train_val_dataset(dataset, val_split=0.25):
@@ -13,18 +14,22 @@ def train_val_dataset(dataset, val_split=0.25):
     return Subset(dataset, train_idx), Subset(dataset, val_idx)
 
 
-def get_oxford_pets(root:str = './oxford_pets', val_split:float = 0.25):
-    train_val = datasets.OxfordIIITPet(root=root, split='trainval', download=True)
+def get_oxford_pets(root:str = './oxford_pets', val_split:float = 0.25, download:bool = False):
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
+    train_val = datasets.OxfordIIITPet(root=root, split='trainval', download=download, transform=transform)
 
     train, val = train_val_dataset(dataset=train_val, val_split=val_split)
 
-    test = datasets.OxfordIIITPet(root=root, split='test', download=True)
+    test = datasets.OxfordIIITPet(root=root, split='test', download=download, transform=transform)
 
     return train, val, test
 
 def get_dataloaders(train, val, test, batch_size:int = 256):
+    
     train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size,
-                                          shuffle=True, num_workers=2)
+                                          shuffle=True, num_workers=2, )
     val_loader = torch.utils.data.DataLoader(val, batch_size=64,
                                           shuffle=True, num_workers=2)
     test_loader = torch.utils.data.DataLoader(test, batch_size=64,
