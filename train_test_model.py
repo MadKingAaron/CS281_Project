@@ -14,11 +14,11 @@ def train_val_dataset(dataset, val_split=0.25):
 
 
 def get_oxford_pets(root:str = './oxford_pets', val_split:float = 0.25):
-    train_val = datasets.OxfordIIITPet(root=root, split='trainval')
+    train_val = datasets.OxfordIIITPet(root=root, split='trainval', download=True)
 
     train, val = train_val_dataset(dataset=train_val, val_split=val_split)
 
-    test = datasets.OxfordIIITPet(root=root, split='test')
+    test = datasets.OxfordIIITPet(root=root, split='test', download=True)
 
     return train, val, test
 

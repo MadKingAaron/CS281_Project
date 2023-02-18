@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 tester.py
 ./oxford_pets/*
+oxford_pets/
