@@ -7,6 +7,11 @@ from torch.utils.data import Subset
 import torchvision.datasets as datasets
 from torchvision import transforms
 
+from sklearn.metrics import multilabel_confusion_matrix
+from sklearn.metrics import classification_report
+
+from tqdm import tqdm
+
 
 def train_val_dataset(dataset, val_split=0.25):
     train_idx, val_idx = train_test_split(list(range(len(dataset))), test_size=val_split)
@@ -14,10 +19,10 @@ def train_val_dataset(dataset, val_split=0.25):
     return Subset(dataset, train_idx), Subset(dataset, val_idx)
 
 
-def get_oxford_pets(root:str = './oxford_pets', val_split:float = 0.25, download:bool = False):
-    transform = transforms.Compose([
-        transforms.ToTensor()
-    ])
+def get_oxford_pets(transform:any, root:str = './oxford_pets', val_split:float = 0.25, download:bool = False):
+    #transform = transforms.Compose([
+    #    transforms.ToTensor()
+    #])
     train_val = datasets.OxfordIIITPet(root=root, split='trainval', download=download, transform=transform)
 
     train, val = train_val_dataset(dataset=train_val, val_split=val_split)
@@ -55,22 +60,27 @@ def apply_transforms(transforms, imgs:torch.Tensor, transformer_model:bool) -> t
 
 
 
-def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, epochs:int = 50, transformer_model:bool = False, scheduler = None, transforms = None):
+def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, epochs:int = 50, transformer_model:bool = False, scheduler = None, transforms = None,
+                device = 'cpu'):
     running_loss = 0.0
 
     for epoch in range(epochs):
-        for i, data in enumerate(trainloader, 0):
+        model.train()
+        print('Epoch %d' %(epoch+1))
+        for i, data in enumerate(tqdm(trainloader), 0):
             # Get inputs and labels
             inputs, labels = data
+            inputs, labels = inputs.to(device), labels.to(device)
 
             # Zero grad
             optimizer.zero_grad()
 
             # Apply image transformations
-            inputs = apply_transforms(transforms, inputs, transformer_model)
+            # inputs = apply_transforms(transforms, inputs, transformer_model)
 
             # Forward + Backprop
             outputs = model(inputs)
+            #print('Shape:', outputs.shape)
 
             if transformer_model:
                 outputs = outputs.logits
@@ -87,40 +97,75 @@ def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, e
                 running_loss = 0.0
         
         # Get validation accuracy and loss
-        val_accuracy, val_loss = validate_model(model, valloader, loss_func, transformer_model, transforms)
+        #print(labels.shape)
+        val_accuracy, val_loss = validate_model(model, valloader, loss_func, transformer_model, transforms, device)
         if scheduler is not None:
             scheduler.step(val_loss)
 
     return model
 
-def validate_model(model, testloader, loss_func, transformer_model:bool = False, transforms = None):
+def validate_model(model, valloader, loss_func, transformer_model:bool = False, transforms = None, device = 'cpu'):
     correct = 0
     total = 0
     total_loss = 0.0
-    with torch.no_grad():
-        for inputs, labels in testloader:
+    model.eval()
+
+    for inputs, labels in valloader:
             
-            # Apply image transformations
-            inputs = apply_transforms(transforms, inputs, transformer_model)
+        # Apply image transformations
+        # inputs = apply_transforms(transforms, inputs, transformer_model)
+        inputs, labels = inputs.to(device), labels.to(device)
+        #print(labels.shape)
+        outputs = model(inputs)
 
-            outputs = model(inputs)
+        if transformer_model:
+            outputs = outputs.logits
 
-            if transformer_model:
-                outputs = outputs.logits
+        #print(outputs)
+        # Calc loss
+        loss = loss_func(outputs, labels)
+        total_loss += loss.item()
 
-            # Calc loss
-            loss = loss_func(outputs, inputs)
-            total_loss += loss.item()
-
-            # Predict classes
-            _, preds = torch.max(outputs, 1)
+        # Predict classes
+        _, preds = torch.max(outputs, 1)
             
-            # Check predictions
-            for label, pred, in zip(labels, preds):
-                if label == pred:
-                    correct += 1
-                total += 1
+        # Check predictions
+        for label, pred, in zip(labels, preds):
+            if label == pred:
+                correct += 1
+            total += 1
     
     return (correct/total), total_loss
 
+def test_model(model, testloader, transformer_model:bool = False,  device = 'cpu'):
+    model.eval()
+    total_preds = None
+    total_labels = None
+    i = 1
+    for inputs, labels in testloader:
+            
+        # Apply image transformations
+        # inputs = apply_transforms(transforms, inputs, transformer_model)
+        inputs, labels = inputs.to(device), labels.to(device)
+        #print(labels.shape)
+        outputs = model(inputs)
 
+        if transformer_model:
+            outputs = outputs.logits
+
+    
+
+        # Predict classes
+        _, preds = torch.max(outputs, 1)
+
+        if total_preds is None:
+            total_preds = preds.cpu()
+            total_labels = labels.cpu()
+        else:
+            print('i:', i)
+            total_labels = torch.cat((total_labels, labels.cpu())).cpu()
+            total_preds = torch.cat((total_preds, preds.cpu())).cpu()
+
+        i+=1
+    report = classification_report(y_true=total_labels, y_pred=total_preds)
+    print(report)

@@ -130,3 +130,5 @@ dmypy.json
 tester.py
 ./oxford_pets/*
 oxford_pets/
+simclr_model/
+data/

@@ -23,7 +23,7 @@ def parse_args():
         "--model_type", type=str, default="simclr", choices=model_choices, help="Model type for training - {}".format(str(model_choices))
     )
     parser.add_argument(
-        "--classes", type=int, default=32, help="Number of classfication classes"
+        "--classes", type=int, default=37, help="Number of classfication classes"
     )
     parser.add_argument(
         "--epochs", type=int, default=10, help="Number of epochs for training"
@@ -32,13 +32,26 @@ def parse_args():
         "--lr", type=float, default=0.01, help="Training Learning Rate"
     )
     parser.add_argument(
-        '--model_save', default='./data/saved_model.pth', type=str, help="File path to trained model to"
+        '--model_save', default='./data/saved_model.pth', type=str, help="File path to save trained model to"
     )
     parser.add_argument("--download_ds", action='store_true')
-    parser.add_argument("--device", type=str, default="cpu", help="Device to use")
+    parser.add_argument("--device", type=str, default="cpu", choices=['cpu', 'cuda', 'mps'], help="Device to use")
     
     args = parser.parse_args()
     return args
+
+class Model_Wrapper(torch.nn.Module):
+    def __init__(self, backbone_model:torch.nn.Module, backbone_output_dim:int = 1000, num_class:int = 32) -> None:
+        super().__init__()
+        self.backbone = backbone_model
+        self.projection_head = torch.nn.Linear(in_features=backbone_output_dim, out_features=num_class, bias=True)
+    
+    def forward(self, x):
+        outputs = self.backbone(x)
+        outputs = self.projection_head(outputs)
+
+        return outputs
+
 
 def get_model(model_type:str, num_classes:int):
     getter_func = model_dict[model_type]
@@ -47,16 +60,31 @@ def get_model(model_type:str, num_classes:int):
 def get_loss_optimizer_sched(lr:float, model:torch.nn.Module):
     return train_test_model.get_optimzer_loss_func(lr, model)
 
-def get_loaders(download:bool = False):
-    train, val, test = train_test_model.get_oxford_pets(download=download)
+def get_loaders(transforms, download:bool = False):
+    train, val, test = train_test_model.get_oxford_pets(transforms, download=download)
     #return train, val, test
-    train, val, test = train_test_model.get_dataloaders(train, test, val)
+    train, val, test = train_test_model.get_dataloaders(train, test, val, batch_size=64)
 
     return train, val, test
 
 def main():
     args = parse_args()
-    model, transforms = get_model(args.model_type, args.classes)
+    device = torch.device(args.device)
+    
+    backbone_model, transforms = get_model(args.model_type, 1000)
+    model = Model_Wrapper(backbone_model=backbone_model, num_class=args.classes).to(device)
+    
     loss_func, optimizer, scheduler = get_loss_optimizer_sched(args.lr, model)
-    train, val, test = get_loaders(args.download_ds)
+    train, val, test = get_loaders(transforms, args.download_ds)
 
+    print('Training')
+    model = train_test_model.train_model(optimizer=optimizer, loss_func=loss_func, trainloader=train,
+                                        valloader=val, model=model, epochs=args.epochs, scheduler=scheduler,
+                                        transforms=transforms, device=device)
+    
+    #train_test_model.validate_model(model, train, loss_func, device=device)
+
+    torch.save(model.state_dict(), args.model_save)
+
+if __name__ == '__main__':
+    main()
