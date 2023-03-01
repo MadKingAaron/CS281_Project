@@ -3,7 +3,13 @@ import torchvision
 from torch import nn
 from torchvision import models
 
-
+class Inception_Wrapper(torch.nn.Module):
+    def __init__(self, inception_model:torch.nn.Module) -> None:
+        super().__init__()
+        self.inception = inception_model
+    def forward(self, x):
+        outputs = self.inception(x)
+        return outputs[0]
 
 def get_resnet50(class_num:int = 32):
     weights = models.ResNet50_Weights.DEFAULT
