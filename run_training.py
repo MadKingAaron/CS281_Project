@@ -82,7 +82,9 @@ def main():
                                         valloader=val, model=model, epochs=args.epochs, scheduler=scheduler,
                                         transforms=transforms, device=device)
     
-    #train_test_model.validate_model(model, train, loss_func, device=device)
+    print('\nTesting')
+    # train_test_model.validate_model(model, train, loss_func, device=device)
+    train_test_model.test_model(model, test, loss_func, device=device)
 
     torch.save(model.state_dict(), args.model_save)
 
