@@ -132,3 +132,6 @@ tester.py
 oxford_pets/
 simclr_model/
 data/
+runs/
+run_simclr.py
+simclr_models.txt

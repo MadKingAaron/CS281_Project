@@ -44,10 +44,13 @@ class Model_Wrapper(torch.nn.Module):
     def __init__(self, backbone_model:torch.nn.Module, backbone_output_dim:int = 1000, num_class:int = 32) -> None:
         super().__init__()
         self.backbone = backbone_model
+        self.relu = torch.nn.ReLU()
         self.projection_head = torch.nn.Linear(in_features=backbone_output_dim, out_features=num_class, bias=True)
+       
     
     def forward(self, x):
         outputs = self.backbone(x)
+        outputs = self.relu(outputs)
         outputs = self.projection_head(outputs)
 
         return outputs

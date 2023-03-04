@@ -3,6 +3,7 @@ import torch.optim as optim
 from torch import nn
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset
+from torch.utils.tensorboard import SummaryWriter
 
 import torchvision.datasets as datasets
 from torchvision import transforms
@@ -63,7 +64,7 @@ def apply_transforms(transforms, imgs:torch.Tensor, transformer_model:bool) -> t
 def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, epochs:int = 50, transformer_model:bool = False, scheduler = None, transforms = None,
                 device = 'cpu'):
     running_loss = 0.0
-
+    writer = SummaryWriter()
     for epoch in range(epochs):
         model.train()
         print('Epoch %d' %(epoch+1))
@@ -99,19 +100,24 @@ def train_model(optimizer, loss_func, trainloader, valloader, model:nn.Module, e
         # Get validation accuracy and loss
         #print(labels.shape)
         val_accuracy, val_loss = validate_model(model, valloader, loss_func, transformer_model, transforms, device)
+        writer.add_scalar("Val/AvgLoss", val_loss, epoch)
+        writer.add_scalar("Train/AvgLoss", running_loss, epoch)
+
         if scheduler is not None:
             scheduler.step(val_loss)
-
+        running_loss = 0.0
+    writer.close()
     return model
 
 def validate_model(model, valloader, loss_func, transformer_model:bool = False, transforms = None, device = 'cpu'):
     correct = 0
     total = 0
     total_loss = 0.0
+    i = 0
     model.eval()
 
     for inputs, labels in valloader:
-            
+        i += 1   
         # Apply image transformations
         # inputs = apply_transforms(transforms, inputs, transformer_model)
         inputs, labels = inputs.to(device), labels.to(device)
@@ -134,8 +140,8 @@ def validate_model(model, valloader, loss_func, transformer_model:bool = False, 
             if label == pred:
                 correct += 1
             total += 1
-    
-    return (correct/total), total_loss
+
+    return (correct/total), (total_loss/i)
 
 def test_model(model, testloader, transformer_model:bool = False,  device = 'cpu'):
     model.eval()
