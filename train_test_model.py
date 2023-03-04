@@ -150,8 +150,8 @@ def test_model(model, testloader, transformer_model:bool = False,  device = 'cpu
         #print(labels.shape)
         outputs = model(inputs)
 
-        if transformer_model:
-            outputs = outputs.logits
+        #if transformer_model:
+        #    outputs = outputs.logits
 
     
 
@@ -162,7 +162,7 @@ def test_model(model, testloader, transformer_model:bool = False,  device = 'cpu
             total_preds = preds.cpu()
             total_labels = labels.cpu()
         else:
-            print('i:', i)
+            #print('i:', i)
             total_labels = torch.cat((total_labels, labels.cpu())).cpu()
             total_preds = torch.cat((total_preds, preds.cpu())).cpu()
 
