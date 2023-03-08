@@ -114,64 +114,65 @@ def validate_model(model, valloader, loss_func, transformer_model:bool = False, 
     total = 0
     total_loss = 0.0
     i = 0
-    model.eval()
+    #model.eval()
+    with torch.no_grad():
+        for inputs, labels in valloader:
+            i += 1   
+            # Apply image transformations
+            # inputs = apply_transforms(transforms, inputs, transformer_model)
+            inputs, labels = inputs.to(device), labels.to(device)
+            #print(labels.shape)
+            outputs = model(inputs)
 
-    for inputs, labels in valloader:
-        i += 1   
-        # Apply image transformations
-        # inputs = apply_transforms(transforms, inputs, transformer_model)
-        inputs, labels = inputs.to(device), labels.to(device)
-        #print(labels.shape)
-        outputs = model(inputs)
+            if transformer_model:
+                outputs = outputs.logits
 
-        if transformer_model:
-            outputs = outputs.logits
+            #print(outputs)
+            # Calc loss
+            loss = loss_func(outputs, labels)
+            total_loss += loss.item()
 
-        #print(outputs)
-        # Calc loss
-        loss = loss_func(outputs, labels)
-        total_loss += loss.item()
-
-        # Predict classes
-        _, preds = torch.max(outputs, 1)
-            
-        # Check predictions
-        for label, pred, in zip(labels, preds):
-            if label == pred:
-                correct += 1
-            total += 1
+            # Predict classes
+            _, preds = torch.max(outputs, 1)
+                
+            # Check predictions
+            for label, pred, in zip(labels, preds):
+                if label == pred:
+                    correct += 1
+                total += 1
 
     return (correct/total), (total_loss/i)
 
 def test_model(model, testloader, transformer_model:bool = False,  device = 'cpu'):
-    model.eval()
+    #model.eval()
     total_preds = None
     total_labels = None
     i = 1
-    for inputs, labels in testloader:
-            
-        # Apply image transformations
-        # inputs = apply_transforms(transforms, inputs, transformer_model)
-        inputs, labels = inputs.to(device), labels.to(device)
-        #print(labels.shape)
-        outputs = model(inputs)
+    with torch.no_grad():
+        for inputs, labels in testloader:
+                
+            # Apply image transformations
+            # inputs = apply_transforms(transforms, inputs, transformer_model)
+            inputs, labels = inputs.to(device), labels.to(device)
+            #print(labels.shape)
+            outputs = model(inputs)
 
-        #if transformer_model:
-        #    outputs = outputs.logits
+            #if transformer_model:
+            #    outputs = outputs.logits
 
-    
+        
 
-        # Predict classes
-        _, preds = torch.max(outputs, 1)
+            # Predict classes
+            _, preds = torch.max(outputs, 1)
 
-        if total_preds is None:
-            total_preds = preds.cpu()
-            total_labels = labels.cpu()
-        else:
-            #print('i:', i)
-            total_labels = torch.cat((total_labels, labels.cpu())).cpu()
-            total_preds = torch.cat((total_preds, preds.cpu())).cpu()
+            if total_preds is None:
+                total_preds = preds.cpu()
+                total_labels = labels.cpu()
+            else:
+                #print('i:', i)
+                total_labels = torch.cat((total_labels, labels.cpu())).cpu()
+                total_preds = torch.cat((total_preds, preds.cpu())).cpu()
 
-        i+=1
+            i+=1
     report = classification_report(y_true=total_labels, y_pred=total_preds)
     print(report)

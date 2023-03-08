@@ -38,5 +38,6 @@ def get_inceptionV3(class_num:int = 32):
     weights = models.Inception_V3_Weights.DEFAULT
     model = models.inception_v3(weights=weights, num_classes=class_num)
     transforms = weights.transforms()
+    model = Inception_Wrapper(model)
 
     return model, transforms

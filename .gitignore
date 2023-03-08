@@ -136,3 +136,12 @@ runs/
 run_simclr.py
 simclr_models.txt
 scripts/
+simclr_50.txt
+simclr_20.txt
+simclr_10.txt
+resnet50_50.txt
+resnet50_20.txt
+resnet50_10.txt
+resnet18_50.txt
+resnet18_20.txt
+resnet18_10.txt
