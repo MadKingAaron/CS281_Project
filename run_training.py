@@ -36,17 +36,22 @@ def parse_args():
     )
     parser.add_argument("--download_ds", action='store_true')
     parser.add_argument("--device", type=str, default="cpu", choices=['cpu', 'cuda', 'mps'], help="Device to use")
+
+    parser.add_argument("--transfer_learning", action='store_true')
     
     args = parser.parse_args()
     return args
 
 class Model_Wrapper(torch.nn.Module):
-    def __init__(self, backbone_model:torch.nn.Module, backbone_output_dim:int = 1000, num_class:int = 32) -> None:
+    def __init__(self, backbone_model:torch.nn.Module, backbone_output_dim:int = 1000, num_class:int = 32, transfer_learning:bool = False) -> None:
         super().__init__()
         self.backbone = backbone_model
         self.relu = torch.nn.ReLU()
         self.projection_head = torch.nn.Linear(in_features=backbone_output_dim, out_features=num_class, bias=True)
-       
+        if transfer_learning:
+            for name, para in self.backbone.named_parameters():
+                para.requires_grad = False
+
     
     def forward(self, x):
         outputs = self.backbone(x)
@@ -75,7 +80,7 @@ def main():
     device = torch.device(args.device)
     
     backbone_model, transforms = get_model(args.model_type, 1000)
-    model = Model_Wrapper(backbone_model=backbone_model, num_class=args.classes).to(device)
+    model = Model_Wrapper(backbone_model=backbone_model, num_class=args.classes, transfer_learning=args.transfer_learning).to(device)
     
     loss_func, optimizer, scheduler = get_loss_optimizer_sched(args.lr, model)
     train, val, test = get_loaders(transforms, args.download_ds)
