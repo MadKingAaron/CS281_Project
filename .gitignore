@@ -145,3 +145,4 @@ resnet50_10.txt
 resnet18_50.txt
 resnet18_20.txt
 resnet18_10.txt
+*.txt
