@@ -52,7 +52,7 @@ def get_model(checkpt_path:str, model_arch:str = 'resnet50', classes:int = 10):
     else:
         raise Exception('Wrong model arch selected')
     
-    checkpoint = torch.load(checkpt_path)
+    checkpoint = torch.load(checkpt_path, map_location=torch.device('cpu'))
 
     state_dict = checkpoint['state_dict']
 
