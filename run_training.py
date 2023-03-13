@@ -37,6 +37,10 @@ def parse_args():
     parser.add_argument("--download_ds", action='store_true')
     parser.add_argument("--device", type=str, default="cpu", choices=['cpu', 'cuda', 'mps'], help="Device to use")
 
+    parser.add_argument(
+        "--batch_size", type=int, default=64, help="Training batch size"
+    )
+
     parser.add_argument("--transfer_learning", action='store_true')
     
     args = parser.parse_args()
@@ -68,10 +72,10 @@ def get_model(model_type:str, num_classes:int):
 def get_loss_optimizer_sched(lr:float, model:torch.nn.Module):
     return train_test_model.get_optimzer_loss_func(lr, model)
 
-def get_loaders(transforms, download:bool = False):
+def get_loaders(transforms, download:bool = False, batch_size:int = 64):
     train, val, test = train_test_model.get_oxford_pets(transforms, download=download)
     #return train, val, test
-    train, val, test = train_test_model.get_dataloaders(train, test, val, batch_size=64)
+    train, val, test = train_test_model.get_dataloaders(train, test, val, batch_size=batch_size)
 
     return train, val, test
 
@@ -83,7 +87,7 @@ def main():
     model = Model_Wrapper(backbone_model=backbone_model, num_class=args.classes, transfer_learning=args.transfer_learning).to(device)
     
     loss_func, optimizer, scheduler = get_loss_optimizer_sched(args.lr, model)
-    train, val, test = get_loaders(transforms, args.download_ds)
+    train, val, test = get_loaders(transforms, args.download_ds, batch_size=args.batch_size)
 
     print('Training')
     model = train_test_model.train_model(optimizer=optimizer, loss_func=loss_func, trainloader=train,
